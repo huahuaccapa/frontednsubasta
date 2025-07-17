@@ -1,12 +1,11 @@
 // app/login/register/page.jsx
 'use client';
-
 import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { register } from '../../Services/authService';
-import { setAuthToken } from '../../utils/auth';
+import { handleOAuthRedirect } from '../../Services/oauthService';
 import '../../styles/login1.css';
 
 function Register() {
@@ -26,10 +25,7 @@ function Register() {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
@@ -44,7 +40,7 @@ function Register() {
     setError('');
     
     try {
-      const userData = {
+      const response = await register({
         name: formData.name,
         email: formData.email,
         password: formData.password,
@@ -52,14 +48,12 @@ function Register() {
         address: formData.address,
         country: formData.country,
         zipcode: formData.zipcode
-      };
+      });
       
-      const response = await register(userData);
-      setAuthToken(response.token);
+      localStorage.setItem('authToken', response.token);
       router.push('/');
     } catch (err) {
-      // El error ya viene formateado desde el interceptor de Axios
-      setError(err.message || 'Error desconocido al registrar el usuario.');
+      setError(err.message || 'Error al registrar el usuario.');
     } finally {
       setIsLoading(false);
     }
@@ -67,9 +61,7 @@ function Register() {
 
   const handleGoogleRegister = () => {
     setIsLoading(true);
-    // Asegúrate de que NEXT_PUBLIC_API_BASE_URL apunte al Gateway (http://localhost:8080)
-    // y que el path sea /oauth2/authorize/google
-    window.location.href = `${process.env.NEXT_PUBLIC_API_BASE_URL}/oauth2/authorize/google`;
+    handleOAuthRedirect();
   };
 
   return (
@@ -236,26 +228,9 @@ function Register() {
                   required
                 >
                   <option value="">Selecciona un país</option>
-                  <option value="AR">Argentina</option>
-                  <option value="BO">Bolivia</option>
-                  <option value="CL">Chile</option>
-                  <option value="CO">Colombia</option>
-                  <option value="CR">Costa Rica</option>
-                  <option value="CU">Cuba</option>
-                  <option value="DO">República Dominicana</option>
-                  <option value="EC">Ecuador</option>
-                  <option value="SV">El Salvador</option>
-                  <option value="GT">Guatemala</option>
-                  <option value="HN">Honduras</option>
                   <option value="MX">México</option>
-                  <option value="NI">Nicaragua</option>
-                  <option value="PA">Panamá</option>
-                  <option value="PY">Paraguay</option>
-                  <option value="PE">Perú</option>
-                  <option value="PR">Puerto Rico</option>
-                  <option value="ES">España</option>
-                  <option value="UY">Uruguay</option>
-                  <option value="VE">Venezuela</option>
+                  <option value="US">Estados Unidos</option>
+                  {/* Más opciones de países */}
                 </select>
               </div>
               
