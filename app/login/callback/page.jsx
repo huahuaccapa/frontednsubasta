@@ -1,58 +1,51 @@
 // app/login/callback/page.jsx
 'use client';
 
-import { useEffect, Suspense } from 'react';
+import { useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { setAuthToken } from '../../utils/auth';
 import { oauthSuccess } from '../../Services/oauthService';
 
-// Componente principal para manejar OAuth
-function OAuthCallback() {
+export default function OAuthCallback() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const token = searchParams.get('token');
-  const error = searchParams.get('error');
-
+  
   useEffect(() => {
-    const handleOAuth = async () => {
-      try {
-        if (error) {
-          // Si hay un error en los parámetros de la URL, lo mostramos
-          throw new Error(`OAuth Error: ${error}`);
-        }
+    const handleOAuthCallback = async () => {
+      const token = searchParams.get('token');
+      const error = searchParams.get('error');
+      
+      if (error) {
+        router.push(`/login?error=${encodeURIComponent(error)}`);
+        return;
+      }
 
-        if (token) {
+      if (token) {
+        try {
+          // Verificar el token con el backend
+          await oauthSuccess();
+          
+          // Almacenar el token
           setAuthToken(token);
           
           // Redirigir a la página original o al home
           const redirectUrl = searchParams.get('redirect') || '/';
           router.push(redirectUrl);
-        } else {
-          throw new Error('Token de autenticación no recibido después de OAuth.');
+        } catch (err) {
+          router.push(`/login?error=${encodeURIComponent(err.message || 'oauth_failed')}`);
         }
-      } catch (err) {
-        console.error('Error en OAuth Callback:', err);
-        // Redirigir al login con un mensaje de error más específico
-        router.push(`/login?error=${encodeURIComponent(err.message || 'oauth_failed')}`);
+      } else {
+        router.push('/login?error=oauth_failed');
       }
     };
 
-    handleOAuth();
-  }, [token, error, router, searchParams]);
+    handleOAuthCallback();
+  }, [router, searchParams]);
 
   return (
     <div className="loading-container">
       <div className="loading-spinner"></div>
-      <p>Autenticando con Google...</p>
+      <p>Procesando autenticación...</p>
     </div>
   );
 }
-
-// Envolver el componente OAuthCallback dentro de Suspense
-const OAuthCallbackSuspense = () => (
-  <Suspense fallback={<div>Cargando...</div>}>
-    <OAuthCallback />
-  </Suspense>
-);
-
-export default OAuthCallbackSuspense;
