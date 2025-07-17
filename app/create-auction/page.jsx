@@ -1,17 +1,18 @@
+// app/create-auction/page.jsx
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '../componets/Header';
-import '../create-auction/create-auction.css';
-
-import { createProduct } from '../Services/productService';
+import { createProduct, uploadProductImage } from '../Services/productService';
 import { createAuction } from '../Services/auctionService';
+import { getCurrentUser } from '../Services/authService';
+import '../create-auction/create-auction.css';
 
 export default function CreateAuctionPage() {
   const router = useRouter();
-  const userId = 10; // para pruebas
+  const [userId, setUserId] = useState(null);
 
-  // — Producto —
+  // Producto
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('Todos');
@@ -21,16 +22,28 @@ export default function CreateAuctionPage() {
   const [productStatus, setProductStatus] = useState('CREATED');
   const [productVisible, setProductVisible] = useState(true);
 
-  // — Subasta —
+  // Subasta
   const [initialPrice, setInitialPrice] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [auctionStatus, setAuctionStatus] = useState('PENDING');
   const [auctionVisible, setAuctionVisible] = useState(true);
 
-  // — UI —
+  // UI
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const user = await getCurrentUser();
+        setUserId(user.id);
+      } catch (err) {
+        router.push('/login');
+      }
+    };
+    fetchUser();
+  }, [router]);
 
   const handleImageChange = e => {
     const files = Array.from(e.target.files);
@@ -61,10 +74,12 @@ export default function CreateAuctionPage() {
     setLoading(true);
 
     try {
-      // Genera URL local para pruebas
-      const imageUrl = imageFiles.length > 0
-        ? URL.createObjectURL(imageFiles[0])
-        : '';
+      // 1) Subir imágenes si hay
+      let imageUrl = '';
+      if (imageFiles.length > 0) {
+        const uploadResponse = await uploadProductImage(imageFiles[0]);
+        imageUrl = uploadResponse.urls[0];
+      }
 
       // 2) Crear producto
       const product = await createProduct({
@@ -72,27 +87,27 @@ export default function CreateAuctionPage() {
         description,
         imageUrl,
         category,
-        basePrice:    parseFloat(basePrice),
+        basePrice: parseFloat(basePrice),
         userId,
-        status:       productStatus,
-        visible:      productVisible
+        status: productStatus,
+        visible: productVisible
       });
 
       // 3) Crear subasta
       const auction = await createAuction({
-        productId:    product.id,
+        productId: product.id,
         initialPrice: parseFloat(initialPrice),
         startDate,
         endDate,
-        status:       auctionStatus,
-        visible:      auctionVisible
+        status: auctionStatus,
+        visible: auctionVisible
       });
 
       // 4) Redirigir
       router.push(`/auctions/${auction.id}`);
     } catch (err) {
       console.error(err);
-      setError(err.message);
+      setError(err.message || 'Error al crear la subasta');
     } finally {
       setLoading(false);
     }

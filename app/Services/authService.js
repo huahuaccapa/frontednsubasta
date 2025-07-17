@@ -1,53 +1,44 @@
 // app/Services/authService.js
-import apiClient from '../Axios/axios';
+import api from './api';
 
-const AUTH_ENDPOINT = '/api/auth';
-
-export const register = async (userData) => {
+export const login = async ({ email, password }) => {
   try {
-    const response = await apiClient.post(`${AUTH_ENDPOINT}/register`, userData);
+    const response = await api.post('/api/auth/login', { email, password });
+    localStorage.setItem('authToken', response.data.token);
     return response.data;
   } catch (error) {
-    throw error;
+    throw error.response?.data?.message || 'Error al iniciar sesión';
   }
 };
 
-export const login = async (credentials) => {
+export const register = async (userData) => {
   try {
-    const response = await apiClient.post(`${AUTH_ENDPOINT}/login`, credentials);
+    const response = await api.post('/api/auth/register', userData);
+    localStorage.setItem('authToken', response.data.token);
     return response.data;
   } catch (error) {
-    throw error;
+    throw error.response?.data?.message || 'Error al registrar usuario';
   }
 };
 
 export const getCurrentUser = async () => {
   try {
-    const response = await apiClient.get(`${AUTH_ENDPOINT}/me`);
+    const response = await api.get('/api/auth/me');
     return response.data;
   } catch (error) {
-    throw error;
+    throw error.response?.data?.message || 'Error al obtener usuario';
   }
+};
+
+export const logout = () => {
+  localStorage.removeItem('authToken');
+  window.location.href = '/login';
 };
 
 export const initiatePasswordReset = async (email) => {
   try {
-    const response = await apiClient.post(`${AUTH_ENDPOINT}/password-reset/initiate`, null, {
-      params: { email }
-    });
-    return response.data;
+    await api.post('/api/auth/forgot-password', { email });
   } catch (error) {
-    throw error;
-  }
-};
-
-export const completePasswordReset = async (token, newPassword) => {
-  try {
-    const response = await apiClient.post(`${AUTH_ENDPOINT}/password-reset/complete`, null, {
-      params: { token, newPassword }
-    });
-    return response.data;
-  } catch (error) {
-    throw error;
+    throw error.response?.data?.message || 'Error al enviar correo de recuperación';
   }
 };

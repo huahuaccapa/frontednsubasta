@@ -1,3 +1,4 @@
+//app\simulator\page.jsx
 "use client";
 
 import Header from "../componets/Header";

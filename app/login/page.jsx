@@ -1,41 +1,33 @@
 // app/login/page.jsx
 'use client';
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Image from 'next/image';
+import Link from 'next/link';
 import { login } from '../Services/authService';
 import { handleOAuthRedirect } from '../Services/oauthService';
 import '../styles/login1.css';
 
-function Login() {
-  const [screen, setScreen] = useState('welcome');
-  const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    email: '',
-    password: ''
-  });
-  const [error, setError] = useState('');
+export default function Login() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [formData, setFormData] = useState({ email: '', password: '' });
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [screen, setScreen] = useState('welcome'); // 'welcome' o 'login'
 
   useEffect(() => {
-    const oauthError = searchParams.get('error');
+    const errorParam = searchParams.get('error');
     const sessionExpired = searchParams.get('sessionExpired');
-  
-    if (oauthError) {
-      setError('Error al autenticar con Google. Inténtalo de nuevo.');
+    
+    if (errorParam) {
+      setError(decodeURIComponent(errorParam));
     }
-  
+    
     if (sessionExpired) {
       setError('Tu sesión ha expirado. Por favor inicia sesión nuevamente.');
     }
   }, [searchParams]);
-
-  const showScreen = (screenName) => {
-    setScreen(screenName);
-    setError('');
-  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -48,11 +40,10 @@ function Login() {
     setError('');
     
     try {
-      const response = await login(formData);
-      localStorage.setItem('authToken', response.token);
+      await login(formData);
       router.push('/');
     } catch (err) {
-      setError(err.message || 'Error desconocido al iniciar sesión.');
+      setError(err.message || 'Error al iniciar sesión');
     } finally {
       setIsLoading(false);
     }
@@ -60,7 +51,7 @@ function Login() {
 
   const handleGoogleLogin = () => {
     setIsLoading(true);
-    handleOAuthRedirect();
+    handleOAuthRedirect('google');
   };
 
   return (
@@ -95,8 +86,8 @@ function Login() {
         </div>
 
         {/* Sección del formulario */}
-        {screen === 'welcome' && (
-          <div id="welcome-screen" className="auth-card screen active">
+        {screen === 'welcome' ? (
+          <div className="auth-card">
             <div className="auth-header">
               <div className="auth-logo">
                 <Image 
@@ -144,8 +135,9 @@ function Login() {
             </div>
             
             <button
-              onClick={() => showScreen('login')}
+              onClick={() => setScreen('login')}
               className="auth-btn auth-btn-primary"
+              disabled={isLoading}
             >
               <i className="fas fa-sign-in-alt"></i> Iniciar Sesión
             </button>
@@ -171,10 +163,8 @@ function Login() {
               </Link>
             </div>
           </div>
-        )}
-
-        {screen === 'login' && (
-          <div id="login-screen" className="auth-card screen active">
+        ) : (
+          <div className="auth-card">
             <div className="auth-header">
               <div className="auth-logo">
                 <Image 
@@ -284,7 +274,7 @@ function Login() {
             </div>
             
             <button 
-              onClick={() => showScreen('welcome')} 
+              onClick={() => setScreen('welcome')} 
               className="mt-4 text-sm text-gray-500 hover:text-primary transition-colors flex items-center justify-center"
             >
               <i className="fas fa-arrow-left mr-2"></i> Volver al inicio
@@ -295,5 +285,3 @@ function Login() {
     </div>
   );
 }
-
-export default Login;

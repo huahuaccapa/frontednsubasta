@@ -1,51 +1,92 @@
-// app/login/callback/page.jsx
 'use client';
-
-import { useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { setAuthToken } from '../../utils/auth';
-import { oauthSuccess } from '../../Services/oauthService';
+import { useEffect, useState } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { handleOAuthCallback } from '../../Services/oauthService';
+import Image from 'next/image';
+import '../../styles/login1.css';
 
 export default function OAuthCallback() {
-  const router = useRouter();
   const searchParams = useSearchParams();
-  
-  useEffect(() => {
-    const handleOAuthCallback = async () => {
-      const token = searchParams.get('token');
-      const error = searchParams.get('error');
-      
-      if (error) {
-        router.push(`/login?error=${encodeURIComponent(error)}`);
-        return;
-      }
+  const router = useRouter();
+  const [error, setError] = useState('');
 
-      if (token) {
-        try {
-          // Verificar el token con el backend
-          await oauthSuccess();
-          
-          // Almacenar el token
-          setAuthToken(token);
-          
-          // Redirigir a la página original o al home
-          const redirectUrl = searchParams.get('redirect') || '/';
-          router.push(redirectUrl);
-        } catch (err) {
-          router.push(`/login?error=${encodeURIComponent(err.message || 'oauth_failed')}`);
-        }
-      } else {
-        router.push('/login?error=oauth_failed');
+  useEffect(() => {
+    const token = searchParams.get('token');
+    const errorParam = searchParams.get('error');
+
+    console.log('Token recibido:', token); // Depuración
+    console.log('Error recibido:', errorParam); // Depuración
+
+    // Manejar errores primero
+    if (errorParam) {
+      const decodedError = decodeURIComponent(errorParam);
+      setError(decodedError);
+      setTimeout(() => {
+        router.push(`/login?error=${encodeURIComponent(decodedError)}`);
+      }, 3000);
+      return;
+    }
+
+    // Si no hay token, redirigir a login
+    if (!token) {
+      console.error('No se encontró token en la URL');
+      router.push('/login');
+      return;
+    }
+
+    // Procesar el token y redirigir
+    const processAuth = async () => {
+      try {
+        const redirectUrl = await handleOAuthCallback(token);
+        const safeRedirectUrl = redirectUrl || '/'; // Fallback a la página principal
+        console.log('Redirigiendo a:', safeRedirectUrl); // Depuración
+        router.push(safeRedirectUrl);
+      } catch (err) {
+        console.error('Error procesando autenticación:', err);
+        setError('Error al iniciar sesión');
+        router.push('/login');
       }
     };
 
-    handleOAuthCallback();
-  }, [router, searchParams]);
+    processAuth();
+  }, [searchParams, router]);
 
   return (
-    <div className="loading-container">
-      <div className="loading-spinner"></div>
-      <p>Procesando autenticación...</p>
+    <div className="auth-container">
+      <div className="auth-card text-center">
+        <div className="auth-header">
+          <div className="auth-logo">
+            <Image 
+              src="/iconos/iniciosesiongoole.png" 
+              alt="Logo" 
+              width={80} 
+              height={80}
+            />
+          </div>
+          <h1 className="auth-title">
+            {error ? 'Error en autenticación' : 'Procesando autenticación...'}
+          </h1>
+        </div>
+
+        <div className="py-8">
+          {error ? (
+            <>
+              <div className="text-red-500 mb-4">
+                <i className="fas fa-exclamation-circle text-4xl"></i>
+              </div>
+              <p className="text-lg mb-4">{error}</p>
+              <p>Serás redirigido al login...</p>
+            </>
+          ) : (
+            <>
+              <div className="animate-spin mb-4">
+                <i className="fas fa-spinner text-4xl text-blue-500"></i>
+              </div>
+              <p>Por favor espera mientras completamos tu autenticación.</p>
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

@@ -2,9 +2,8 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { getCurrentUser } from '../../Services/authService';
-import { updateUserProfile } from '../../Services/userService';
-import '../../profile/profile.css';
+import { getCurrentUser, updateUserProfile } from '../../Services/authService';
+import '../profile/profile.css';
 
 export default function Profile() {
   const [userData, setUserData] = useState({
@@ -146,9 +145,11 @@ export default function Profile() {
                 onChange={handleInputChange}
               >
                 <option value="">Selecciona un país</option>
+                <option value="PE">Perú</option>
                 <option value="MX">México</option>
+                <option value="CO">Colombia</option>
+                <option value="ES">España</option>
                 <option value="US">Estados Unidos</option>
-                {/* Más opciones de países */}
               </select>
             </div>
 

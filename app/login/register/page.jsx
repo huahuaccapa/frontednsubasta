@@ -230,7 +230,9 @@ function Register() {
                   <option value="">Selecciona un país</option>
                   <option value="MX">México</option>
                   <option value="US">Estados Unidos</option>
-                  {/* Más opciones de países */}
+                  <option value="PE">Perú</option>
+                  <option value="CO">Colombia</option>
+                  <option value="ES">España</option>
                 </select>
               </div>
               

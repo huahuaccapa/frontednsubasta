@@ -1,139 +1,156 @@
+// app/page.jsx
 'use client';
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Header from '../app/componets/Header';
-import '../app/styles/global.css';
+import Header from './componets/Header';
 import DetalleArticle from './detail-article/page';
-import ChatbotBox from '../app/componets/ChatbotBox';
+import ChatbotBox from './componets/ChatbotBox';
+import { getAuctions } from './Services/auctionService';
+import './styles/global.css';
 
 export default function Homepage() {
   const [selectedItem, setSelectedItem] = useState(null);
+  const [auctions, setAuctions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const items = [
-    {
-      title: 'Smartphone Premium 256GB',
-      subtitle: 'Último Modelo',
-      imageUrl: 'https://cdn.pixabay.com/photo/2016/11/29/12/30/phone-1869510_960_720.jpg',
-      price: '1799.00',
-      bids: 5,
-      description: 'Este es un smartphone de última generación, con 256GB de almacenamiento y una cámara increíble.',
-    },
-    {
-      title: 'Tablet Android 10"',
-      subtitle: 'Perfecta para Estudiantes',
-      imageUrl: 'https://cdn.pixabay.com/photo/2016/03/27/19/43/samsung-1283938_960_720.jpg',
-      price: '650.00',
-      bids: 5,
-      description: 'Una tablet Android de 10", ideal para estudiar y entretenimiento.',
-    },
-  ];
+  useEffect(() => {
+    const fetchAuctions = async () => {
+      try {
+        const data = await getAuctions();
+        setAuctions(data);
+      } catch (err) {
+        setError(err.message || 'Error al cargar subastas');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAuctions();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="dashboard">
+        <Header />
+        <main className="main-content">
+          <p>Cargando subastas...</p>
+        </main>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="dashboard">
+        <Header />
+        <main className="main-content">
+          <p className="error">{error}</p>
+        </main>
+      </div>
+    );
+  }
+
+  const featuredAuctions = auctions.filter(a => a.featured);
+  const endingSoonAuctions = auctions.filter(a => new Date(a.endDate).getTime() - Date.now() < 86400000); // Menos de 24 horas
+  const recentAuctions = [...auctions].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 4);
 
   return (
     <div className="dashboard">
       <Header />
-
       <main className="main-content">
         <section className="auction-section">
           <div className="section-header">
             <h2>Subastas Destacadas</h2>
-            <button className="see-all">Ver todo</button>
+            <Link href="/auctions" className="see-all">Ver todo</Link>
           </div>
           
           <div className="auctions-grid">
-            <div className="auction-card" onClick={() => setSelectedItem(items[0])}>
-              <div className="auction-badge">Destacado</div>
-              <img src="https://cdn.pixabay.com/photo/2016/11/29/12/30/phone-1869510_960_720.jpg" alt="Smartphone" />
-              <div className="auction-info">
-                <h3>Smartphone Premium 256GB</h3>
-                <p className="subtitle">Último Modelo</p>
-                <div className="price-section">
-                  <span className="price">S/ 1,799.00</span>
-                  <span className="bids">5 pujas</span>
-                </div>
-                <div className="auction-footer">
-                  <span className="seller"><i className="fas fa-user"></i> TechSeller123</span>
-                  <span className="time"><i className="fas fa-clock"></i> 4h 23m</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="auction-card" onClick={() => setSelectedItem(items[1])}>
-              <img src="https://cdn.pixabay.com/photo/2016/03/27/19/43/samsung-1283938_960_720.jpg" alt="Tablet" />
-              <div className="auction-info">
-                <h3>Tablet Android 10"</h3>
-                <p className="subtitle">Perfecta para Estudiantes</p>
-                <div className="price-section">
-                  <span className="price">S/ 650.00</span>
-                  <span className="bids">5 pujas</span>
-                </div>
-                <div className="auction-footer">
-                  <span className="seller"><i className="fas fa-user"></i> ElectroDeals</span>
-                  <span className="time"><i className="fas fa-clock"></i> 1d 12h</span>
+            {featuredAuctions.map(auction => (
+              <div 
+                key={auction.id} 
+                className="auction-card" 
+                onClick={() => setSelectedItem(auction)}
+              >
+                {auction.featured && <div className="auction-badge">Destacado</div>}
+                <img src={auction.product.imageUrl} alt={auction.product.name} />
+                <div className="auction-info">
+                  <h3>{auction.product.name}</h3>
+                  <p className="subtitle">{auction.product.category}</p>
+                  <div className="price-section">
+                    <span className="price">S/ {auction.currentPrice || auction.initialPrice}</span>
+                    <span className="bids">{auction.bidCount} pujas</span>
+                  </div>
+                  <div className="auction-footer">
+                    <span className="seller">
+                      <i className="fas fa-user"></i> {auction.product.user?.name || 'Vendedor'}
+                    </span>
+                    <span className="time">
+                      <i className="fas fa-clock"></i> {formatTimeLeft(auction.endDate)}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
+            ))}
           </div>
         </section>
 
         <section className="auction-section">
           <div className="section-header">
             <h2>Finalizando Pronto</h2>
-            <button className="see-all">Ver todo</button>
+            <Link href="/auctions?filter=ending" className="see-all">Ver todo</Link>
           </div>
           
           <div className="auctions-grid">
-            <div className="auction-card">
-              <img src="https://cdn.pixabay.com/photo/2018/01/28/21/14/lens-3114729_960_720.jpg" alt="Lente" />
-              <div className="auction-info">
-                <h3>Lente Profesional 50mm</h3>
-                <p className="subtitle">f/1.4 para Cámaras DSLR</p>
-                <div className="price-section">
-                  <span className="price">S/ 1,250.00</span>
-                  <span className="bids">5 pujas</span>
-                </div>
-                <div className="auction-footer">
-                  <span className="seller"><i className="fas fa-user"></i> FotoExperto</span>
-                  <span className="time ending-soon"><i className="fas fa-clock"></i> 35m</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="auction-card">
-              <img src="https://cdn.pixabay.com/photo/2016/03/27/07/12/apple-watch-1282242_960_720.jpg" alt="Smartwatch" />
-              <div className="auction-info">
-                <h3>Smartwatch Multifunción</h3>
-                <p className="subtitle">Con Seguimiento de Actividad</p>
-                <div className="price-section">
-                  <span className="price">S/ 450.00</span>
-                  <span className="bids">5 pujas</span>
-                </div>
-                <div className="auction-footer">
-                  <span className="seller"><i className="fas fa-user"></i> WearableTech</span>
-                  <span className="time ending-soon"><i className="fas fa-clock"></i> 18m</span>
+            {endingSoonAuctions.map(auction => (
+              <div 
+                key={auction.id} 
+                className="auction-card" 
+                onClick={() => setSelectedItem(auction)}
+              >
+                <img src={auction.product.imageUrl} alt={auction.product.name} />
+                <div className="auction-info">
+                  <h3>{auction.product.name}</h3>
+                  <p className="subtitle">{auction.product.category}</p>
+                  <div className="price-section">
+                    <span className="price">S/ {auction.currentPrice || auction.initialPrice}</span>
+                    <span className="bids">{auction.bidCount} pujas</span>
+                  </div>
+                  <div className="auction-footer">
+                    <span className="seller">
+                      <i className="fas fa-user"></i> {auction.product.user?.name || 'Vendedor'}
+                    </span>
+                    <span className="time ending-soon">
+                      <i className="fas fa-clock"></i> {formatTimeLeft(auction.endDate)}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
+            ))}
           </div>
         </section>
         
         <section className="auction-section">
           <div className="section-header">
             <h2>Subastas Recientes</h2>
-            <button className="see-all">Ver todo</button>
+            <Link href="/auctions?filter=recent" className="see-all">Ver todo</Link>
           </div>
 
           <div className="auctions-grid">
-            {items.map((item, index) => (
-              <div key={index} className="auction-card" onClick={() => setSelectedItem(item)}>
+            {recentAuctions.map(auction => (
+              <div 
+                key={auction.id} 
+                className="auction-card" 
+                onClick={() => setSelectedItem(auction)}
+              >
                 <div className="auction-badge">Nuevo</div>
-                <img src={item.imageUrl} alt={item.title} />
+                <img src={auction.product.imageUrl} alt={auction.product.name} />
                 <div className="auction-info">
-                  <h3>{item.title}</h3>
-                  <p className="subtitle">{item.subtitle}</p>
+                  <h3>{auction.product.name}</h3>
+                  <p className="subtitle">{auction.product.category}</p>
                   <div className="price-section">
-                    <span className="price">S/ {item.price}</span>
-                    <span className="bids">{item.bids} pujas</span>
+                    <span className="price">S/ {auction.currentPrice || auction.initialPrice}</span>
+                    <span className="bids">{auction.bidCount} pujas</span>
                   </div>
                 </div>
               </div>
@@ -152,4 +169,22 @@ export default function Homepage() {
       <ChatbotBox />
     </div>
   );
+}
+
+function formatTimeLeft(endDate) {
+  const end = new Date(endDate);
+  const now = new Date();
+  const diff = end - now;
+  
+  if (diff <= 0) return 'Finalizada';
+  
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  
+  if (hours > 24) {
+    const days = Math.floor(hours / 24);
+    return `${days}d ${hours % 24}h`;
+  }
+  
+  return `${hours}h ${minutes}m`;
 }
