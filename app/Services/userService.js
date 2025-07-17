@@ -1,61 +1,43 @@
+// app/Services/userService.js
 import apiClient from '../Axios/axios';
 
-/**
- * Crea un nuevo usuario.
- * POST /users
- * @param {Object} userData { name, email, passwordHash, ... }
- * @returns Promise<UserDTO>
- */
-export function createUser(userData) {
-  return apiClient.post('/users', userData);
-}
+const USER_ENDPOINT = '/api/users';
 
-/**
- * Obtiene un usuario por su ID.
- * GET /users/{id}
- * @param {number} userId
- * @returns Promise<UserDTO>
- */
-export function getUserById(userId) {
-  return apiClient.get(`/users/${userId}`);
-}
+export const getUserProfile = async () => {
+  try {
+    const response = await apiClient.get(`${USER_ENDPOINT}/me`);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
 
-/**
- * Lista todos los usuarios visibles.
- * GET /users
- * @returns Promise<UserDTO[]>
- */
-export function getAllUsers() {
-  return apiClient.get('/users');
-}
+export const updateUserProfile = async (userData) => {
+  try {
+    const response = await apiClient.put(`${USER_ENDPOINT}/profile`, userData);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
 
-/**
- * Lista usuarios por estado (ACTIVE o SUSPENDED).
- * GET /users/status/{status}
- * @param {string} status // e.g. 'ACTIVE'
- * @returns Promise<UserDTO[]>
- */
-export function getUsersByStatus(status) {
-  return apiClient.get(`/users/status/${status}`);
-}
+export const updatePassword = async (currentPassword, newPassword) => {
+  try {
+    const response = await apiClient.put(`${USER_ENDPOINT}/password`, {
+      currentPassword,
+      newPassword
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
 
-/**
- * Actualiza un usuario existente.
- * PUT /users/{id}
- * @param {number} userId
- * @param {Object} userData
- * @returns Promise<UserDTO>
- */
-export function updateUser(userId, userData) {
-  return apiClient.put(`/users/${userId}`, userData);
-}
-
-/**
- * "Elimina" (marca como visible=false) un usuario.
- * DELETE /users/{id}
- * @param {number} userId
- * @returns Promise<void>
- */
-export function deleteUser(userId) {
-  return apiClient.delete(`/users/${userId}`);
-}
+export const deleteAccount = async () => {
+  try {
+    const response = await apiClient.delete(`${USER_ENDPOINT}/account`);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
