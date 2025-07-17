@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { FaGavel, FaRegCommentDots } from 'react-icons/fa';
 import { useRouter } from 'next/navigation';
+import { sendChatMessage } from '@/app/Services/chatbotService';
 import './Chatbot.css';
 
 export default function ChatbotBox() {
@@ -45,13 +46,7 @@ export default function ChatbotBox() {
     setMessages((prev) => [...prev, userMsg]);
 
     try {
-      const res = await fetch('http://localhost:8083/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sender: 'Usuario', content: text }),
-      });
-
-      const data = await res.json();
+      const data = await sendChatMessage(text);
       const botMsg = {
         sender: data.sender,
         content: data.content,
