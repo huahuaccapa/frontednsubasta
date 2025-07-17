@@ -1,10 +1,10 @@
 // app/login/forgot-password/page.jsx
 'use client';
-
 import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { initiatePasswordReset } from '../../Services/authService';
+import { handleOAuthRedirect } from '../../Services/oauthService';
 import '../../styles/login1.css';
 
 function ForgotPassword() {
@@ -19,11 +19,10 @@ function ForgotPassword() {
     setError('');
     
     try {
-      await initiatePasswordReset(email); // Esta función ya envía el email como query param
+      await initiatePasswordReset(email);
       setEmailSent(true);
     } catch (err) {
-      // El error ya viene formateado desde el interceptor de Axios
-      setError(err.message || 'Error desconocido al enviar el correo de recuperación.');
+      setError(err.message || 'Error al enviar el correo de recuperación.');
     } finally {
       setIsLoading(false);
     }
@@ -31,9 +30,7 @@ function ForgotPassword() {
 
   const handleGoogleLogin = () => {
     setIsLoading(true);
-    // Asegúrate de que NEXT_PUBLIC_API_BASE_URL apunte al Gateway (http://localhost:8080)
-    // y que el path sea /oauth2/authorize/google
-    window.location.href = `${process.env.NEXT_PUBLIC_API_BASE_URL}/oauth2/authorize/google`;
+    handleOAuthRedirect();
   };
 
   return (
