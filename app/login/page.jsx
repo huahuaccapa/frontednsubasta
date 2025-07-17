@@ -1,14 +1,13 @@
-'use client'; // Asegúrate de que este archivo se ejecute solo en el cliente.
-
+// app/login/page.jsx
+'use client';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { login } from '../Services/authService';
-import { setAuthToken } from '../utils/auth';
+import { handleOAuthRedirect } from '../Services/oauthService';
 import '../styles/login1.css';
 
-// Componente principal para Login
 function Login() {
   const [screen, setScreen] = useState('welcome');
   const [isLoading, setIsLoading] = useState(false);
@@ -18,27 +17,18 @@ function Login() {
   });
   const [error, setError] = useState('');
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const oauthError = searchParams.get('error');
+    const sessionExpired = searchParams.get('sessionExpired');
   
-  // Declaramos searchParams solo dentro de un hook useEffect, para asegurarnos de que no se ejecute durante la prerenderización.
-  const [searchParams, setSearchParams] = useState(null);
-
-  useEffect(() => {
-    // Solo ejecutamos este código en el cliente
-    setSearchParams(new URLSearchParams(window.location.search));
-  }, []);
-
-  useEffect(() => {
-    if (searchParams) {
-      const oauthError = searchParams.get('error');
-      const sessionExpired = searchParams.get('sessionExpired');
-    
-      if (oauthError) {
-        setError('Error al autenticar con Google. Inténtalo de nuevo.');
-      }
-    
-      if (sessionExpired) {
-        setError('Tu sesión ha expirado. Por favor inicia sesión nuevamente.');
-      }
+    if (oauthError) {
+      setError('Error al autenticar con Google. Inténtalo de nuevo.');
+    }
+  
+    if (sessionExpired) {
+      setError('Tu sesión ha expirado. Por favor inicia sesión nuevamente.');
     }
   }, [searchParams]);
 
@@ -49,10 +39,7 @@ function Login() {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleLogin = async (e) => {
@@ -62,7 +49,7 @@ function Login() {
     
     try {
       const response = await login(formData);
-      setAuthToken(response.token);
+      localStorage.setItem('authToken', response.token);
       router.push('/');
     } catch (err) {
       setError(err.message || 'Error desconocido al iniciar sesión.');
@@ -73,7 +60,7 @@ function Login() {
 
   const handleGoogleLogin = () => {
     setIsLoading(true);
-    window.location.href = `${process.env.NEXT_PUBLIC_API_BASE_URL}/oauth2/authorize/google`;
+    handleOAuthRedirect();
   };
 
   return (
