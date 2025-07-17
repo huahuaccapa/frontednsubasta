@@ -4,6 +4,11 @@ import Header from "../componets/Header";
 import React, { useState, useEffect, useRef } from "react";
 import "./simulator.css";
 import "../styles/global.css";
+import {
+  startAuction,
+  fetchAuctionState,
+  sendBid as sendBidService,
+} from '@/app/Services/simulatorService';
 
 const STRATEGIES = [
   { id: "CONSERVATIVE", name: "Conservadora", description: "Puja poco a poco, esperando hasta el final." },
@@ -18,12 +23,9 @@ export default function SimulatorPage() {
   const [userBid, setUserBid] = useState("");
   const intervalRef = useRef(null);
 
-  const BASE_URL = "http://localhost:8085/auction";
-
   const fetchState = async () => {
     try {
-      const res = await fetch(`${BASE_URL}/estado`);
-      const data = await res.json();
+      const data = await fetchAuctionState();
 
       if (data.bidHistory?.length > 8) {
         data.bidHistory = data.bidHistory.slice(-8);
@@ -40,14 +42,11 @@ export default function SimulatorPage() {
     }
   };
 
-  const startAuction = async () => {
+  const handleStart = async () => {
     if (!selectedStrategy) return alert("Selecciona una estrategia primero.");
 
     try {
-      const res = await fetch(`${BASE_URL}/iniciar?estrategia=${selectedStrategy.id}`, {
-        method: "POST",
-      });
-      const data = await res.json();
+      const data = await startAuction(selectedStrategy.id);
       setAuctionState(data);
       setIsRunning(true);
       if (intervalRef.current) clearInterval(intervalRef.current);
@@ -57,14 +56,11 @@ export default function SimulatorPage() {
     }
   };
 
-  const sendBid = async () => {
+  const handleSendBid = async () => {
     const amount = Number(userBid);
     if (!amount || amount <= 0) return alert("Ingresa un monto válido.");
     try {
-      const res = await fetch(`${BASE_URL}/pujar?monto=${amount}`, {
-        method: "POST",
-      });
-      const data = await res.json();
+      const data = await sendBidService(amount);
       setAuctionState(data);
       setUserBid("");
     } catch (err) {
@@ -112,7 +108,9 @@ export default function SimulatorPage() {
                 <select
                   value={selectedStrategy?.id || ""}
                   onChange={(e) =>
-                    setSelectedStrategy(STRATEGIES.find((s) => s.id === e.target.value) || null)
+                    setSelectedStrategy(
+                      STRATEGIES.find((s) => s.id === e.target.value) || null
+                    )
                   }
                   className="simulator-select"
                   disabled={isRunning}
@@ -130,14 +128,13 @@ export default function SimulatorPage() {
                 <p className="text-gray-500 italic text-sm">{selectedStrategy.description}</p>
               )}
 
-              <button onClick={startAuction} className="simulator-button start-btn">
+              <button onClick={handleStart} className="simulator-button start-btn">
                 Iniciar Subasta
               </button>
             </div>
           </div>
         ) : (
           <>
-        
             <div className="simulator-card simulator-panel">
               <div className="simulator-section status-box">
                 <div><strong>⏳ Tiempo restante:</strong> {auctionState.remainingTime}s</div>
@@ -159,7 +156,7 @@ export default function SimulatorPage() {
                       placeholder="Ingresa tu monto"
                     />
                     <button
-                      onClick={sendBid}
+                      onClick={handleSendBid}
                       className="simulator-button bid-btn"
                       disabled={!userBid || Number(userBid) <= (lastBid?.amount || 0)}
                     >
@@ -191,7 +188,6 @@ export default function SimulatorPage() {
               )}
             </div>
 
-   
             <div className="history-card">
               <h3 className="text-md font-semibold text-gray-800 mb-2">📜 Historial de Pujas</h3>
               <div className="bid-history">
